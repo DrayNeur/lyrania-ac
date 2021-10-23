@@ -1,0 +1,9 @@
+name: LyraniaAC
+version: 1.0
+author: Drayneur
+main: gq.drayneur.lyraniaac.LyraniaAC
+commands:
+  check:
+    description: Give you the level of violation hack of a player
+    usage: /check <player>
+    permission: lyraniaac.check
