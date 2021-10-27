@@ -15,44 +15,24 @@ import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.BlockIterator;
 import org.bukkit.util.Vector;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
 public class LyraniaAC extends JavaPlugin {
 
-    public static HashMap<UUID, HashMap<String, Float>> players = new HashMap<>();
+    public static ArrayList<PlayerInfo> players = new ArrayList<>();
 
-    public boolean isOnEdgeOfBlock(Player p) {
-        double X = p.getLocation().getX();
-        double Y = p.getLocation().getY() - 1;
-        double Z = p.getLocation().getZ();
-
-        if (p.getWorld().getBlockAt(new Location(p.getWorld(), X - 1, Y, Z)).getType() != Material.AIR ||
-                p.getWorld().getBlockAt(new Location(p.getWorld(), X + 1, Y, Z)).getType() != Material.AIR ||
-                p.getWorld().getBlockAt(new Location(p.getWorld(), X, Y, Z - 1)).getType() != Material.AIR ||
-                p.getWorld().getBlockAt(new Location(p.getWorld(), X, Y, Z + 1)).getType() != Material.AIR ||
-                p.getWorld().getBlockAt(new Location(p.getWorld(), X + 1, Y, Z + 1)).getType() != Material.AIR ||
-                p.getWorld().getBlockAt(new Location(p.getWorld(), X + 1, Y, Z - 1)).getType() != Material.AIR ||
-                p.getWorld().getBlockAt(new Location(p.getWorld(), X - 1, Y, Z + 1)).getType() != Material.AIR ||
-                p.getWorld().getBlockAt(new Location(p.getWorld(), X - 1, Y, Z - 1)).getType() != Material.AIR) {
-            return true;
+    public static PlayerInfo getPlayerByUUID(UUID uuid) {
+        for (PlayerInfo pInfo:
+             players) {
+            if(pInfo.getUuid() == uuid)
+                return pInfo;
         }
-        return false;
+        return null;
     }
 
-    public static void addDetection(UUID uuid, String type, float level) {
-        HashMap<String, Float> violationCurrent = LyraniaAC.players.get(uuid);
-        if (violationCurrent != null) {
-            if (violationCurrent.get(type) == null) {
-                violationCurrent.put(type, level);
-            } else {
-                violationCurrent.put(type, violationCurrent.get(type) + level);
-            }
-        } else {
-            LyraniaAC.players.remove(uuid);
-        }
-    }
     public static final Block getTargetBlock(Player player, int range) {
         BlockIterator iter = new BlockIterator(player, range);
         Block lastBlock = iter.next();
@@ -77,19 +57,21 @@ public class LyraniaAC extends JavaPlugin {
         scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
             @Override
             public void run() {
-                players.forEach((uuid, violations) -> {
-                    violations.forEach((type, level) -> {
+                for (PlayerInfo pInfo:
+                     players) {
+                    pInfo.getViolations().forEach((type, level) -> {
                         if (level > 50)
-                            Bukkit.getServer().getPlayer(uuid).kickPlayer("§4§lLyraniaAC\n\n§cHack detection: §e" + type + "\n§cLevel: §e" + level + "\n§bSi vous pensez que c'est une érreur contactez nous.");
+                            Bukkit.getServer().getPlayer(pInfo.getUuid()).kickPlayer("§4§lLyraniaAC\n\n§cHack detection: §e" + type + "\n§cLevel: §e" + level + "\n§bSi vous pensez que c'est une érreur contactez nous.");
                     });
-                });
+                }
             }
         }, 50, 50);
         scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
             @Override
             public void run() {
-                players.forEach((uuid, violations) -> {
-                    Player p = Bukkit.getServer().getPlayer(uuid);
+                for (PlayerInfo pInfo:
+                     players) {
+                    Player p = Bukkit.getServer().getPlayer(pInfo.getUuid());
                     if (p.getGameMode() != GameMode.CREATIVE && p.getGameMode() != GameMode.SPECTATOR) {
                         double lastY = p.getLocation().getY();
                         Location lastLoc = p.getLocation();
@@ -100,20 +82,25 @@ public class LyraniaAC extends JavaPlugin {
                                 if (diffYproc < 0.5) {
                                     int count = 0;
                                     for (count = 0; count > 255 || p.getWorld().getBlockAt(new Location(p.getWorld(), p.getLocation().getX(), p.getLocation().getY() - count, p.getLocation().getZ())).getType() == Material.AIR; count++) ;
-                                    if (count > 2 && !isOnEdgeOfBlock(p)) {
+                                    if (count > 2 && !Util.isInMiddleOfMaterial(p, Material.AIR)) {
                                         p.teleport(new Location(p.getWorld(), p.getLocation().getX(),p.getLocation().getY()-(count-1),p.getLocation().getZ()));
-                                        addDetection(p.getUniqueId(), "fly_hack_still", 5.0f);
+                                        pInfo.addDetection("fly_hack_still", 5.0f);
                                     }
                                 }
                                 if(diffY>2.80) {
                                     p.teleport(lastLoc);
-                                    addDetection(p.getUniqueId(), "fly_hack_y", 2.0f*(float)diffY);
+                                    pInfo.addDetection("fly_hack_y", 2.0f*(float)diffY);
                                 }
+                                if(diffYproc < 0.5 &&
+                                        p.getWorld().getBlockAt(new Location(p.getWorld(), p.getLocation().getX(), p.getLocation().getY()-1, p.getLocation().getZ())).getType() == Material.STATIONARY_WATER &&
+                                        Util.isInMiddleOfMaterial(p, Material.STATIONARY_WATER)) {
+                                    pInfo.addDetection("jesus_still", 2.0f);
 
+                                }
                             }, 20L);
                         }
                     }
-                });
+                }
             }
         }, 10, 10);
     }

@@ -22,8 +22,11 @@ public class CheckCommand implements CommandExecutor {
                 p.sendMessage("§cThe player does not exist !");
                 return true;
             }
-            HashMap<String, Float> violation = LyraniaAC.players.get(checkingPlayer.getUniqueId());
+            HashMap<String, Float> violation = LyraniaAC.getPlayerByUUID(checkingPlayer.getUniqueId()).getViolations();
             p.sendMessage("§e Violations of "+strings[0]+"\n§e---");
+            if(violation.size() == 0) {
+                p.sendMessage("§cThis player has no violation hack !");
+            }
             violation.forEach((type, level) -> {
                 String color = (level < 12.5 ? "§a" : level < 25 ? "§2" : level < 37.5 ? "§c" : "§4");
                 p.sendMessage("§3"+type+":"+color+level);

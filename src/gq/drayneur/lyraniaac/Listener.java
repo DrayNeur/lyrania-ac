@@ -24,24 +24,26 @@ import java.util.List;
 public class Listener implements org.bukkit.event.Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e) {
-        LyraniaAC.players.put(e.getPlayer().getUniqueId(), new HashMap<>());
+        LyraniaAC.players.add(new PlayerInfo(e.getPlayer().getUniqueId()));
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent e) {
-        LyraniaAC.players.remove(e.getPlayer().getUniqueId());
+        LyraniaAC.players.removeIf(p -> (p.getUuid() == e.getPlayer().getUniqueId()));
     }
 
     @EventHandler
     public void onEntityTakeDamage(EntityDamageEvent e) {
-        EntityDamageByEntityEvent entityEvent = (EntityDamageByEntityEvent) e;
-        if (entityEvent.getDamager() instanceof Player) {
-            Player attacker = (Player)entityEvent.getDamager();
-            Entity entity = e.getEntity();
-            double distance = entity.getLocation().distance(attacker.getLocation());
-            if(distance > 4.0) {
-                e.setCancelled(true);
-                LyraniaAC.addDetection(attacker.getUniqueId(), "reach_basic", 2.0f*(float)distance);
+        if(e instanceof EntityDamageByEntityEvent) {
+            EntityDamageByEntityEvent entityEvent = (EntityDamageByEntityEvent) e;
+            if (entityEvent.getDamager() instanceof Player) {
+                Player attacker = (Player)entityEvent.getDamager();
+                Entity entity = e.getEntity();
+                double distance = entity.getLocation().distance(attacker.getLocation());
+                if(distance > 4.0) {
+                    e.setCancelled(true);
+                    LyraniaAC.getPlayerByUUID(attacker.getUniqueId()).addDetection("reach_basic", 2.0f*(float)distance);
+                }
             }
         }
     }
